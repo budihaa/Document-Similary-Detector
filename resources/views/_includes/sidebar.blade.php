@@ -17,7 +17,7 @@
 					<a href="{{ route('all-documents.index') }}"><i class="fas fa-book"></i>Master Dokumen</a>
 				</li>
 				<li>
-					<a href="{{ route('detect.index') }}"><i class="zmdi zmdi-search-in-file"></i>Deteksi Dokumen !</a>
+					<a href="{{ route('detect.index') }}"><i class="zmdi zmdi-search-in-file"></i>Deteksi Dokumen</a>
 				</li>
 			</ul>
 		</nav>
