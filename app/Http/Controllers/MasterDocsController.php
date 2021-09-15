@@ -38,7 +38,7 @@ class MasterDocsController extends Controller
             })
             ->editColumn('created_at', function ($doc) {
                 if ($doc->created_at !== null) {
-                    return date('d-m-Y / H:i', strtotime($doc->created_at));
+                    return date('d-m-Y', strtotime($doc->created_at));
                 }
 
                 return '-';

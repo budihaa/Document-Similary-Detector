@@ -23,7 +23,7 @@
 				<table id="datatable" class="table table-bordered table-striped">
 					<thead>
 						<tr>
-							<th><i class="fas fa-clock"></i> Dibuat pada</th>
+							<th>Tanggal</th>
 							<th>Kategori</th>
 							<th>Judul</th>
 							<th>Penulis</th>
@@ -33,7 +33,7 @@
 					<tbody></tbody>
 					<tfoot>
 						<tr>
-							<th><i class="fas fa-clock"></i> Dibuat pada</th>
+							<th>Tanggal</th>
 							<th>Kategori</th>
 							<th>Judul</th>
 							<th>Penulis</th>

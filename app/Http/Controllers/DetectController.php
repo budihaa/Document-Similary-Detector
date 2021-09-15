@@ -123,13 +123,13 @@ class DetectController extends Controller
         sort($termDictionary, SORT_STRING);
 
         // TODOS:
-        // 1. TF
+        // 1. TF (Term Frequency)
         $arrTF = [];
         foreach ($termDictionary as $termDic) {
             // DocQuery
             $count = 0;
             foreach ($docQuery as $q) {
-                if ($termDic == $q) {
+                if ($termDic === $q) {
                     $count++;
                 }
                 $arrTF[0][$termDic] = $count;
@@ -139,7 +139,7 @@ class DetectController extends Controller
             foreach ($masterDocs as $master) {
                 $counter = 0;
                 foreach (unserialize($master->text) as $arr) {
-                    if ($termDic == $arr) {
+                    if ($termDic === $arr) {
                         $counter++;
                     }
                     $arrTF[$master->id][$termDic] = $counter;
@@ -147,18 +147,76 @@ class DetectController extends Controller
             }
         }
 
-        foreach ($arrTF as $tf) {
+        // 2. TD-IDF
+        $idf = [];
+        $totalDocs = count($arrTF);
+        foreach ($termDictionary as $termDic) {
+            $df = 0; // DF (Document Frequency)
 
+            foreach ($arrTF as $docs) {
+                foreach ($docs as $word => $val) {
+                    if ($word === $termDic && $val > 0) {
+                        $df++; // DF (Document Frequency)
+                    }
+                }
+            }
+
+
+            // IDF (Inverse Document Frequency)
+            $idf[$termDic] = log10($totalDocs / $df) + 1;
         }
 
-        dd($arrTF);
+        // 3. TF-IDF
+        $tfIdf = [];
+        foreach ($idf as $wordIdf => $item) {
+            foreach ($arrTF as $key => $docs) {
+                foreach ($docs as $word => $val) {
+                    if ($word === $wordIdf) {
+                        $resultTfIdf = $val * $item;
+                        $tfIdf[$key][$wordIdf] = $resultTfIdf;
+                    }
+                }
+            }
+        }
 
-        // 2. IDF
-        // 3. TD IDF
         // 4. COSINE SIMILARITY
 
-        return view('welcome', compact('masterDocs'));
-        die;
+        // Skalar (Q tfidf * D1, D2, D3, ... tfidf)
+        $skalar = [];
+        foreach ($tfIdf as $title => $data) {
+            if ($title !== 0) {
+                foreach ($data as $key => $val) {
+                    $skalar[$title][$key] = $tfIdf[0][$key] * $val;
+                }
+            }
+        }
+
+        // Total skalar
+        $totalSkalar = [];
+        foreach ($skalar as $title => $skal) {
+            $total = 0;
+            foreach ($skal as $key => $val) {
+                $total += $val;
+            }
+            $totalSkalar[$title] = $total;
+        }
+
+        // Kuadrat TF - IDF
+        $totalKuadrat = [];
+        foreach ($tfIdf as $title => $data) {
+            $kuadratTfIdf = 0;
+            foreach ($data as $key => $val) {
+                $kuadrat = pow($val, 2);
+                $kuadratTfIdf += $kuadrat;
+            }
+            $totalKuadrat[$title] = $kuadratTfIdf;
+        }
+
+        // Akar kuadrat total TF - IDF
+        $akarKuadratTfIdf = [];
+        foreach ($totalKuadrat as $title => $data) {
+            $akarKuadratTfIdf[$title] = sqrt($data);
+        }
 
         // ====== III. Tahap 3: Insert record deteksi ======
         $detect = new Detect();
@@ -169,16 +227,13 @@ class DetectController extends Controller
         $detect->save();
 
         $insertBatch = [];
-        foreach ($masterDocs as $key => $master) {
+        foreach ($totalSkalar as $title => $skalar) {
             $insertBatch[] = [
                 'detect_id' => $detect->id,
-                'master_doc_id' => $master->id,
-                'result' => $results[$key],
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
+                'master_doc_id' => $title,
+                'result' => $skalar / ($akarKuadratTfIdf[0] * $akarKuadratTfIdf[$title]),
             ];
         }
-
         DetectSimilarity::insert($insertBatch);
 
         return redirect()->route('detect.result', ['id' => $detect->id]);
