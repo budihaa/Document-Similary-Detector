@@ -48,54 +48,55 @@
                             <div class="col-lg-12 col-12">
                                 <div class="au-card m-b-30">
                                     <div class="au-card-inner">
-                                        <h3 class="title-5 m-b-40">Term yang menjadi acuan perhitungan</h3>
+                                        <h3 class="title-5 mb-4">Perhitungan TF - IDF</h3>
                                         <div class="row">
-                                            <div class="col-md-4 mb-4">
-                                                <ul class="list-group text-center">
-                                                    <li class="list-group-item active">{{ $detect->title }} (Dokumen
-                                                        Anda)</li>
-                                                    @foreach (unserialize($detect->text) as $val)
-                                                    <li class="list-group-item">{{ $val }}</li>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered table-hover">
+                                                    <tr class="text-center">
+                                                        <th>Term</th>
+                                                        <th>{{ $detect->title }} (Dokumen Deteksi)</th>
+                                                        @foreach ($results as $result)
+                                                        <th>{{ $result->title }}</th>
+                                                        @endforeach
+                                                    </tr>
+                                                    @foreach (unserialize($detect->tf_idf) as $term => $tfIdf)
+                                                    <tr class="text-center">
+                                                        <th>{{ $term }}</th>
+                                                        <td>{{ $tfIdf }}</td>
+                                                        @foreach ($results as $result)
+                                                        @foreach (unserialize($result->tf_idf) as $t => $tfIdfMaster)
+                                                        @if ($term === $t)
+                                                        <td>{{ $tfIdfMaster }}</td>
+                                                        @endif
+                                                        @endforeach
+                                                        @endforeach
+                                                    </tr>
                                                     @endforeach
-                                                </ul>
+                                                </table>
                                             </div>
-
-                                            @foreach ($results as $result)
-                                            <div class="col-md-4 mb-4">
-                                                <ul class="list-group text-center">
-                                                    <li class="list-group-item active">{{ $result->title }}</li>
-                                                    @foreach (unserialize($result->text) as $text)
-                                                    <li class="list-group-item">{{ $text }}</li>
-                                                    @endforeach
-                                                </ul>
-                                            </div>
-                                            @endforeach
                                         </div>
-
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <footer class="footer copyright">
-                        <p>Copyright © {{ date('Y') }} DSD. All rights reserved. Created with <i
-                                class="fas fa-heart text-danger"></i> by Budi Haryono</a>.</p>
-                    </footer>
+                <div class="row">
+                    <div class="col-md-12">
+                        <footer class="footer copyright">
+                            <p>Copyright © {{ date('Y') }} DSD. All rights reserved.</p>
+                        </footer>
+                    </div>
                 </div>
             </div>
+            <!-- END PAGE CONTAINER-->
+
         </div>
-        <!-- END PAGE CONTAINER-->
 
-    </div>
+        @include('_includes/scripts')
 
-    @include('_includes/scripts')
-
-    <script type="text/javascript">
-        $( function() {
+        <script type="text/javascript">
+            $( function() {
 				var horizonalLinePlugin = {
 					afterDraw: function(chartInstance) {
 						var yScale = chartInstance.scales["y-axis-0"];
@@ -144,51 +145,23 @@
 
 				var ctx = document.getElementById("result-chart");
 				ctx.height = 150;
-				var myChart = new Chart(ctx, {
+
+                $.ajax({
+                    url: '{!! route('detect.chart', ['id' => $detect->id]) !!}',
+                    method: 'GET',
+                    dataType: 'JSON'
+                }).done(function(data) {
+                    new Chart(ctx, {
 					type: 'bar',
 					data: {
-						labels: [
-						@foreach ($results as $result)
-						{!! '"'.str_replace(' ', '\n', $result->title).'",' !!}
-						@endforeach
-                        'test'
-						],
-						datasets: [
-						{
-							label: "Tingkat Kemiripan",
-							data: [
-							@foreach ($results as $result)
-							{!! number_format($result->result * 100, 2) . ',' !!}
-							@endforeach
-                            100
-							],
-							borderWidth: "2",
-							borderColor: [
-							@foreach ($results as $result)
-							@if (number_format($result->result * 100, 2) >= $garisBatas)
-							{!! "'#D50000'," !!}
-							@else
-							{!! "'#00C853'," !!}
-							@endif
-							@endforeach
-							],
-							backgroundColor: [
-							@foreach ($results as $result)
-							@if (number_format($result->result * 100, 2) >= $garisBatas)
-							{!! "'#FF1744'," !!}
-							@else
-							{!! "'#00E676'," !!}
-							@endif
-							@endforeach
-							]
-						}
-						]
+						labels: data.labels,
+						datasets: data.datasets,
 					},
 					options: {
 						horizontalLine: [{
 							y: {{ $garisBatas }},
 							style: "#FDD835",
-							text: "Min"
+							text: ""
 						}],
 						tooltips: {
 							mode: 'label',
@@ -215,7 +188,10 @@
 								scaleLabel: { display: true, labelString: 'Persentase Kemiripan' },
 								ticks: {
 									beginAtZero: true,
-									fontFamily: "Poppins"
+									fontFamily: "Poppins",
+                                    beginAtZero: true,
+                                    min: 0,
+                                    max: 100,
 								},
 							}]
 						}
@@ -228,11 +204,13 @@
 								}
 							});
 						}
-					}]
+					}],
 				});
-
+                }).fail(function() {
+                    alert('Gagal');
+                });
 			} );
-    </script>
+        </script>
 </body>
 
 </html>

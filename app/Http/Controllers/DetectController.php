@@ -180,7 +180,6 @@ class DetectController extends Controller
         }
 
         // 4. COSINE SIMILARITY
-
         // Skalar (Q tfidf * D1, D2, D3, ... tfidf)
         $skalar = [];
         foreach ($tfIdf as $title => $data) {
@@ -224,6 +223,7 @@ class DetectController extends Controller
         $detect->created_by = $request->created_by;
         $detect->title = $request->title;
         $detect->text = serialize($docQuery);
+        $detect->tf_idf = serialize($tfIdf[0]);
         $detect->save();
 
         $insertBatch = [];
@@ -232,6 +232,7 @@ class DetectController extends Controller
                 'detect_id' => $detect->id,
                 'master_doc_id' => $title,
                 'result' => $skalar / ($akarKuadratTfIdf[0] * $akarKuadratTfIdf[$title]),
+                'tf_idf' => serialize($tfIdf[$title]),
             ];
         }
         DetectSimilarity::insert($insertBatch);
@@ -244,17 +245,48 @@ class DetectController extends Controller
         $detect = Detect::findOrFail($id);
         $results = DB::table('detect_similarities')
             ->leftJoin('master_docs', 'master_docs.id', '=', 'detect_similarities.master_doc_id')
-            ->select('detect_similarities.result', 'master_docs.title', 'master_docs.text', 'master_docs.created_by')
+            ->select('detect_similarities.result', 'master_docs.title', 'master_docs.text', 'master_docs.created_by', 'detect_similarities.tf_idf')
             ->where('detect_id', $id)
             ->get();
         $garisBatas = 85;
 
-        $acuanTR[] = unserialize($detect->text);
-        foreach ($results as $res) {
-            $acuanTR[] = unserialize($res->text);
-        }
-        $maxTR = count(max($acuanTR));
+        return view('pages.detect.result', compact('detect', 'results', 'garisBatas'));
+    }
 
-        return view('pages.detect.result', compact('detect', 'results', 'garisBatas', 'maxTR'));
+    public function chart($id)
+    {
+        $garisBatas = 85;
+        $results = DB::table('detect_similarities')
+            ->leftJoin('master_docs', 'master_docs.id', '=', 'detect_similarities.master_doc_id')
+            ->select('detect_similarities.result', 'master_docs.title', 'master_docs.text', 'master_docs.created_by')
+            ->where('detect_id', $id)
+            ->get();
+
+        $response = [];
+        $labels = [];
+        foreach ($results as $result) {
+            $labels[] = str_replace(' ', '\n', $result->title);
+        }
+        $response['labels'] = $labels;
+
+        $data = $borderColor = $backgroundColor = [];
+        foreach ($results as $result) {
+            $value = number_format($result->result * 100, 2);
+            $data[] = $value;
+            $borderColor[] = $value >= $garisBatas ? '#D50000' : '#00C853';
+            $backgroundColor[] = $value >= $garisBatas ? '#FF1744' : '#00E676';
+        }
+
+        $response['datasets'] = [
+            [
+                'label' => "Tingkat Kemiripan",
+                'data' => $data,
+                'borderWidth' => "2",
+                'borderColor' => $borderColor,
+                'backgroundColor' => $backgroundColor
+            ]
+        ];
+
+        return response($response);
     }
 }

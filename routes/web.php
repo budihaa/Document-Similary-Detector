@@ -40,4 +40,5 @@ Route::group([
     Route::get('/getMasterDocs', [DetectController::class, 'getMasterDocs'])->name('detect.master-docs');
     Route::get('/detect/result/{id}', [DetectController::class, 'result'])->name('detect.result');
     Route::post('/detect', [DetectController::class, 'store'])->name('detect.store');
+    Route::get('/detect/chart/{id}', [DetectController::class, 'chart'])->name('detect.chart');
 });
